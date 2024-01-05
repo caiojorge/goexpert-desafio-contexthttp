@@ -10,49 +10,75 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func Connect() (*sql.DB, error) {
-	_db, err := sql.Open("sqlite", ":memory:")
+type SqlLiteDb struct {
+	db *sql.DB
+}
+
+func NewSqlLiteDb() *SqlLiteDb {
+	return &SqlLiteDb{}
+}
+
+func (s *SqlLiteDb) Connect() (*sql.DB, error) {
+	var err error
+	s.db, err = sql.Open("sqlite", ":memory:")
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
 	log.Println("connection ok")
-	return _db, nil
+	return s.db, nil
 }
 
-func Migration(db *sql.DB) {
+func (s *SqlLiteDb) Migration() {
+	if s.db == nil {
+		log.Println("database not connected")
+		return
+	}
 
 	sqlStmt := `
-    CREATE TABLE example (
-        id INTEGER NOT NULL PRIMARY KEY,
-        name TEXT
-    );`
-	_, err := db.Exec(sqlStmt)
+    CREATE TABLE currency (
+		id INTEGER NOT NULL PRIMARY KEY,
+		name TEXT,
+		currency_value FLOAT
+	);
+	`
+	_, err := s.db.Exec(sqlStmt)
 	if err != nil {
 		log.Fatalf("%q: %s\n", err, sqlStmt)
 	}
 	log.Println("migration ok")
 }
 
-func InsertQuote(db *sql.DB) {
+func (s *SqlLiteDb) InsertQuote(name string, currencyValue float64) error {
+
+	if s.db == nil {
+		log.Println("database not connected")
+		return fmt.Errorf("database not connected")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-
-	_, err := db.ExecContext(ctx, "INSERT INTO example (id, name) VALUES (?, ?)", 1, "Sample Data")
+	sql := "INSERT INTO currency (name, currency_value) VALUES (?, ?)"
+	_, err := s.db.ExecContext(ctx, sql, name, currencyValue)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 	log.Println("Processing ok")
+	return nil
 }
 
-func SelectQuote(db *sql.DB) {
+func (s *SqlLiteDb) SelectQuote() {
+	if s.db == nil {
+		log.Println("database not connected")
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	rows, err := db.QueryContext(ctx, "SELECT id, name FROM example")
+	rows, err := s.db.QueryContext(ctx, "SELECT id, name, currency_value FROM currency")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,11 +88,12 @@ func SelectQuote(db *sql.DB) {
 	for rows.Next() {
 		var id int
 		var name string
-		err = rows.Scan(&id, &name)
+		var currency_value float64
+		err = rows.Scan(&id, &name, &currency_value)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(id, name)
+		fmt.Println(id, name, currency_value)
 	}
 	err = rows.Err()
 	if err != nil {

@@ -5,7 +5,8 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-	db, err := Connect()
+	s := NewSqlLiteDb()
+	db, err := s.Connect()
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %s", err)
 	}
@@ -16,17 +17,34 @@ func TestConnect(t *testing.T) {
 }
 
 func TestMigration(t *testing.T) {
-	db, _ := Connect()
+	s := NewSqlLiteDb()
+	db, _ := s.Connect()
 	defer db.Close()
 
-	Migration(db)
+	s.Migration()
 }
 
 func TestInsertQuote(t *testing.T) {
-	db, _ := Connect()
+	s := NewSqlLiteDb()
+	db, _ := s.Connect()
 	defer db.Close()
 
-	Migration(db)
-	InsertQuote(db)
-	SelectQuote(db)
+	s.Migration()
+
+	err := s.InsertQuote("Dólar", 5.25)
+	if err != nil {
+		t.Fatalf("Failed to insert quote: %s", err)
+	}
+
+	err = s.InsertQuote("Dólar", 5.26)
+	if err != nil {
+		t.Fatalf("Failed to insert quote: %s", err)
+	}
+
+	s.InsertQuote("Dólar", 5.27)
+	if err != nil {
+		t.Fatalf("Failed to insert quote: %s", err)
+	}
+
+	s.SelectQuote()
 }
