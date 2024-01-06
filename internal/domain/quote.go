@@ -1,4 +1,9 @@
-package handler
+package domain
+
+import (
+	"log"
+	"strconv"
+)
 
 type Quote struct {
 	USDBRL struct {
@@ -14,4 +19,12 @@ type Quote struct {
 		Timestamp  string `json:"timestamp"`
 		CreateDate string `json:"create_date"`
 	} `json:"USDBRL"`
+}
+
+func (q *Quote) GetBid() float64 {
+	bid, err := strconv.ParseFloat(q.USDBRL.Bid, 64)
+	if err != nil {
+		log.Fatalf("Failed to convert string to float64: %v", err)
+	}
+	return bid
 }

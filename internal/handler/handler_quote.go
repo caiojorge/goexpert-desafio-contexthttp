@@ -1,13 +1,12 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"time"
+
+	"github.com/caiojorge/goexpert-desafio1/internal/infra"
 )
 
 func QuoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,18 +16,24 @@ func QuoteHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		log.Println("get quote")
-		data, err := getQuoteHandler(w, r)
+		q := NewAwesomeApi()
+		data, err := q.GetQuoteHandler(w, r)
 		if err != nil {
 			log.Println("failure - processing the request: " + err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		jsonQuote, err := json.Marshal(data.USDBRL.Bid)
+		jsonQuote, err := json.Marshal(data.GetBid())
 		if err != nil {
 			log.Println("failure - marshaling json: " + err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// poderia usar um service aqui e um repositorio, mas como é um projeto pequeno, não achei necessário
+		infra.NewSqlLiteDb().InsertQuote("Dólar", data.GetBid())
+		infra.NewFile().Save(data.GetBid())
+
 		w.Write(jsonQuote)
 
 	case http.MethodPost:
@@ -42,50 +47,4 @@ func QuoteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unsupported HTTP method", http.StatusMethodNotAllowed)
 	}
 
-}
-
-func getQuoteHandler(w http.ResponseWriter, r *http.Request) (*Quote, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	log.Println("Request iniciada")
-	defer log.Println("Request finalizada")
-
-	data, err := getQuote(ctx, "https://economia.awesomeapi.com.br/json/last/USD-BRL")
-	if err != nil {
-		log.Println("failure - internal error: " + err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, err
-	}
-	return data, nil
-}
-
-func getQuote(ctx context.Context, url string) (*Quote, error) {
-	var quote *Quote
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		log.Println("failure - creating context: " + err.Error())
-		return nil, err
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println("failure - requesting the url: " + err.Error())
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("failure - reading the body: " + err.Error())
-		return nil, err
-	}
-
-	err = json.Unmarshal(body, &quote)
-	if err != nil {
-		log.Println("failure - unmarshal json: " + err.Error())
-		return nil, err
-	}
-	return quote, nil
 }

@@ -1,7 +1,13 @@
-Olá dev, tudo bem?
+# Como rodar os programas
 
-Neste desafio vamos aplicar o que aprendemos sobre webserver http, contextos,
-banco de dados e manipulação de arquivos com Go.
+go mod tidy
+go run .\cmd\server\main.go
+go run .\cmd\client\main.go
+
+Caso queiram rodar os testes
+go test ./...
+
+# Desafio
 
 Você precisará nos entregar dois sistemas em Go:
 
