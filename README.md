@@ -7,6 +7,9 @@ go run .\cmd\client\main.go
 Caso queiram rodar os testes
 go test ./...
 
+Caso queiram ler o doc da api de cotação
+https://docs.awesomeapi.com.br/api-de-moedas
+
 # Desafio
 
 Você precisará nos entregar dois sistemas em Go:
